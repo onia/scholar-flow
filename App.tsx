@@ -1,6 +1,6 @@
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import SearchPanel from './components/SearchPanel';
 import TrendDashboard from './components/TrendDashboard';
@@ -29,6 +29,7 @@ import IdeaGuide from './components/IdeaGuide';
 import WelcomeModal from './components/WelcomeModal';
 import JournalSandbox from './components/JournalSandbox';
 import OpeningReport from './components/OpeningReport';
+import Settings from './components/Settings';
 import { ViewState, Paper, Language } from './types';
 
 export default function App() {
@@ -36,6 +37,19 @@ export default function App() {
   const [language, setLanguage] = useState<Language>('EN');
   const [reviewPapers, setReviewPapers] = useState<Paper[]>([]);
   const [extractedData, setExtractedData] = useState<any[][] | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Check for API key on mount and prompt if missing (only if no env fallback)
+  useEffect(() => {
+    const userApiKey = localStorage.getItem('GEMINI_API_KEY');
+    const envApiKey = (process.env as any).API_KEY || (process.env as any).GEMINI_API_KEY;
+
+    // Only show settings prompt if there's no user key AND no env fallback
+    if (!userApiKey && !envApiKey) {
+      // Delay showing settings to let the app render first
+      setTimeout(() => setShowSettings(true), 1000);
+    }
+  }, []);
 
   const handleReviewRequest = (papers: Paper[]) => {
     setReviewPapers(papers);
@@ -52,11 +66,12 @@ export default function App() {
       <WelcomeModal language={language} />
       
       {/* Top Navigation */}
-      <Navbar 
-        language={language} 
-        setLanguage={setLanguage} 
+      <Navbar
+        language={language}
+        setLanguage={setLanguage}
         currentView={currentView}
         setCurrentView={setCurrentView}
+        onOpenSettings={() => setShowSettings(true)}
       />
       
       <div className="flex flex-grow overflow-hidden relative">
@@ -154,6 +169,11 @@ export default function App() {
           </div>
         </main>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <Settings language={language} onClose={() => setShowSettings(false)} />
+      )}
     </div>
   );
 }
