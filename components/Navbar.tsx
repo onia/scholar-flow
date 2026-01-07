@@ -1,12 +1,12 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, FileText, TrendingUp, BookOpen, User, Globe, PenTool, CheckSquare, 
-  MonitorPlay, Lightbulb, ClipboardCheck, Moon, Sun, MessagesSquare, 
-  Briefcase, BarChart2, Terminal, Beaker, Table2, Network, Gem, 
+import {
+  Search, FileText, TrendingUp, BookOpen, User, Globe, PenTool, CheckSquare,
+  MonitorPlay, Lightbulb, ClipboardCheck, Moon, Sun, MessagesSquare,
+  Briefcase, BarChart2, Terminal, Beaker, Table2, Network, Gem,
   Calendar, ShieldAlert, Workflow, Zap, Compass, Layers, PenLine, Wrench, Layout,
-  Dumbbell, Book, Activity, Brain, Target, FileType
+  Dumbbell, Book, Activity, Brain, Target, FileType, Settings
 } from 'lucide-react';
 import { ViewState, Language } from '../types';
 import { TRANSLATIONS } from '../translations';
@@ -16,9 +16,10 @@ interface NavbarProps {
   setLanguage: (lang: Language) => void;
   currentView: ViewState;
   setCurrentView: (view: ViewState) => void;
+  onOpenSettings?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ language, setLanguage, currentView, setCurrentView }) => {
+const Navbar: React.FC<NavbarProps> = ({ language, setLanguage, currentView, setCurrentView, onOpenSettings }) => {
   const t = TRANSLATIONS[language].nav;
   const groupT = TRANSLATIONS[language].groups;
 
@@ -138,6 +139,14 @@ const Navbar: React.FC<NavbarProps> = ({ language, setLanguage, currentView, set
           >
             <Globe size={18} />
             <span>{language}</span>
+          </button>
+
+          <button
+            onClick={onOpenSettings}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+            title={language === 'ZH' ? '设置' : 'Settings'}
+          >
+            <Settings size={18} />
           </button>
 
           <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
