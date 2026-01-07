@@ -17,7 +17,28 @@ import {
   OpeningTopicSuggestion, OpeningLitReview, OpeningMethodology, OpeningOutlineItem, OpeningSimulatedDefense
 } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get API key - checks user settings first, then falls back to env
+function getApiKey(): string {
+  // Priority 1: User-provided key from localStorage
+  const userApiKey = localStorage.getItem('GEMINI_API_KEY');
+  if (userApiKey) {
+    return userApiKey;
+  }
+
+  // Priority 2: Fallback to environment variable (for development)
+  const envApiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  if (envApiKey) {
+    return envApiKey;
+  }
+
+  // No API key found
+  throw new Error('API key not found. Please configure your Gemini API key in Settings.');
+}
+
+// Helper to get GoogleGenAI instance with current API key
+function getAI(): GoogleGenAI {
+  return new GoogleGenAI({ apiKey: getApiKey() });
+}
 
 function cleanJson(text: string): string {
   if (!text) return "{}";
@@ -77,7 +98,7 @@ export async function parsePaperFromImage(file: File, language: Language): Promi
       "badges": [{"type": "LOCAL"}]
     }`;
     
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
         parts: [
@@ -112,7 +133,7 @@ export async function generatePaperInterpretation(paper: Paper, language: Langua
   4. Practical Applications`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
@@ -128,15 +149,16 @@ export async function searchAcademicPapers(query: string, language: Language, li
   Language: ${language}.
   Limit: ${limit} results.
   Return a JSON array of Paper objects with fields: id (string), title, authors (string[]), journal, year (number), citations (number), abstract, badges (array of {type: string, partition?: string, if?: number}).
-  Use Google Search grounding to find real papers if possible.`;
+  Use Google Search grounding to find real papers if possible.
+
+  IMPORTANT: Return ONLY valid JSON array, no markdown code blocks or explanatory text.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
-        tools: [{googleSearch: {}}],
-        responseMimeType: 'application/json'
+        tools: [{googleSearch: {}}]
       }
     });
     const text = cleanJson(response.text || "[]");
@@ -156,7 +178,7 @@ export async function generateSimulatedFullText(paper: Paper, language: Language
   Format: Markdown.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
@@ -176,7 +198,7 @@ export async function extractChartData(file: File, language: Language): Promise<
     - summary: string (analysis in ${language})
     - data: array of objects representing the rows/datapoints.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
         parts: [
@@ -203,7 +225,7 @@ export async function analyzeResearchTrends(topic: string, language: Language, t
   - researchGaps: array of {problem, potential, difficulty, type}`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: { responseMimeType: 'application/json' }
@@ -307,7 +329,7 @@ export async function generateOpeningTopicSuggestions(broadArea: string, languag
     { id: string, title: string, innovationScore: number, feasibilityScore: number, workloadScore: number, comment: string }
     `;
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAI().models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
@@ -334,7 +356,7 @@ export async function generateOpeningLitReview(title: string, language: Language
     }
     `;
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAI().models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
@@ -357,7 +379,7 @@ export async function recommendOpeningMethod(title: string, domain: string, type
     { "recommendedMethod": "string", "reason": "string", "roadmapMermaid": "string" }
     `;
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAI().models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
@@ -382,7 +404,7 @@ export async function generateOpeningOutline(title: string, method: string, lang
     Return JSON array of tree nodes: { id, title, content (brief placeholder description), children? }
     `;
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAI().models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
@@ -394,7 +416,7 @@ export async function generateOpeningOutline(title: string, method: string, lang
 export async function fillOpeningContent(outlineItemTitle: string, topic: string, language: Language): Promise<string> {
     const prompt = `Draft content for the section "${outlineItemTitle}" of the opening report for topic "${topic}". Language: ${language}. Keep it academic and concise.`;
     try {
-        const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        const response = await getAI().models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
         return response.text || "";
     } catch (e) { return ""; }
 }
@@ -418,7 +440,7 @@ export async function simulateOpeningDefense(framework: any, language: Language)
     }
     `;
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAI().models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
@@ -452,7 +474,7 @@ export async function scanResearchGap(domain: string, targetJournal: string, pro
     }`;
     
     try {
-        const response = await ai.models.generateContent({ 
+        const response = await getAI().models.generateContent({ 
             model: 'gemini-2.5-flash', 
             contents: prompt, 
             config: { responseMimeType: 'application/json' } 
@@ -469,7 +491,7 @@ export async function recommendTheories(domain: string, path: string, language: 
     Return JSON array of { name, description, relevance }.
     `;
     try {
-        const response = await ai.models.generateContent({ 
+        const response = await getAI().models.generateContent({ 
             model: 'gemini-2.5-flash', 
             contents: prompt, 
             config: { responseMimeType: 'application/json' } 
@@ -488,7 +510,7 @@ export async function constructConceptualModel(theory: string, path: string, lan
     Return JSON: { iv, dv, mediator, moderator, hypotheses: string[], reviewerComment }.
     `;
     try {
-        const response = await ai.models.generateContent({ 
+        const response = await getAI().models.generateContent({ 
             model: 'gemini-2.5-flash', 
             contents: prompt, 
             config: { responseMimeType: 'application/json' } 
@@ -506,7 +528,7 @@ export async function critiqueMethodology(method: string, model: any, targetJour
     Return JSON: { verdict: 'Risky'|'Robust', critique, suggestion, reviewerComment }.
     `;
     try {
-        const response = await ai.models.generateContent({ 
+        const response = await getAI().models.generateContent({ 
             model: 'gemini-2.5-flash', 
             contents: prompt, 
             config: { responseMimeType: 'application/json' } 
@@ -523,7 +545,7 @@ export async function generateSubmissionFramework(allData: any, language: Langua
     Return JSON: { title, abstract, introduction: {hook, gap, contribution}, methodPlan, robustness }.
     `;
     try {
-        const response = await ai.models.generateContent({ 
+        const response = await getAI().models.generateContent({ 
             model: 'gemini-2.5-flash', 
             contents: prompt, 
             config: { responseMimeType: 'application/json' } 
@@ -570,7 +592,7 @@ export async function generateOpeningReview(
     }
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
         parts: [
@@ -596,7 +618,7 @@ export async function optimizeOpeningSection(section: string, context: string, l
   Maintain academic rigor.
   `;
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
